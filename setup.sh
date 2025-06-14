@@ -1,66 +1,76 @@
 #!/bin/bash
-echo "🚀 Starting smart full-stack setup..."
 
-BUILD_DIR="dist"
-TARGET_BRANCH="gh-pages"
+echo "🚀 Starting smart setup for your game..."
 
-if [ -f "package.json" ]; then
-  echo "📦 Node project detected. Installing dependencies..."
+# ---- CONFIG ----
+BUILD_DIR="docs"
+PACKAGE_FILE="package.json"
+VITE_CONFIG="vite.config.js"
+
+# ---- STEP 0: Environment Check ----
+if ! command -v npm &> /dev/null; then
+  echo "❌ npm not found. Please install Node.js + npm first: https://nodejs.org"
+  exit 1
+fi
+
+# ---- STEP 1: Install Dependencies ----
+if [ -f "$PACKAGE_FILE" ]; then
+  echo "📦 Installing dependencies from $PACKAGE_FILE..."
   npm install || { echo "❌ npm install failed."; exit 1; }
-
-  if [ -f "vite.config.js" ] || grep -q vite package.json; then
-    echo "⚡ Vite detected."
-    if ! npx --no vite &>/dev/null; then
-      echo "📥 Installing Vite..."
-      npm install --save-dev vite
-    fi
-    if ! grep -q '"build"' package.json; then
-      echo "🔧 Adding Vite build script to package.json..."
-      npx npm-add-script -k "build" -v "vite build"
-    fi
-    [ ! -f vite.config.js ] && echo 'export default { root: ".", build: { outDir: "dist" } }' > vite.config.js
-    echo "🏗️ Building with Vite..."
-    npm run build || { echo "❌ Vite build failed."; exit 1; }
-
-  elif grep -q parcel package.json; then
-    echo "🎁 Parcel detected."
-    if ! npx --no parcel &>/dev/null; then
-      echo "📥 Installing Parcel..."
-      npm install --save-dev parcel
-    fi
-    if ! grep -q '"build"' package.json; then
-      echo "🔧 Adding Parcel build script to package.json..."
-      npx npm-add-script -k "build" -v "parcel build index.html"
-    fi
-    echo "🏗️ Building with Parcel..."
-    npm run build || { echo "❌ Parcel build failed."; exit 1; }
-
-  else
-    echo "⚠️ Unknown build tool. Please add a build script to package.json."
-    exit 1
-  fi
-
 else
-  echo "🧾 No package.json — assuming static site."
-  BUILD_DIR="."
+  echo "⚠️ $PACKAGE_FILE not found. Creating minimal Vite-compatible file..."
+
+  cat <<EOL > $PACKAGE_FILE
+{
+  "name": "epic-game",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^4.0.0"
+  }
+}
+EOL
+  npm install || { echo "❌ npm install after creation failed."; exit 1; }
 fi
 
-if git rev-parse --is-inside-work-tree &>/dev/null; then
-  echo "🚀 Preparing deployment to GitHub Pages..."
-  DEPLOY_DIR=$(mktemp -d)
-  cp -r $BUILD_DIR/* $DEPLOY_DIR/
-  git checkout --orphan $TARGET_BRANCH
-  git rm -rf .
-  cp -r $DEPLOY_DIR/* .
-  rm -rf $DEPLOY_DIR
-  touch .nojekyll
-  git add .
-  git commit -m "🚀 Deploy to GitHub Pages"
-  git push origin $TARGET_BRANCH --force
-  echo "✅ Deployed to https://bengothard.github.io/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git//')/"
-else
-  echo "⚠️ Not a Git repo. Please git init and add origin."
-  echo "   git init && git remote add origin <repo-url>"
+# ---- STEP 2: Ensure Vite Config Exists ----
+if [ ! -f "$VITE_CONFIG" ]; then
+  echo "⚙️ Creating default $VITE_CONFIG for GitHub Pages deployment to /docs..."
+  echo 'export default { build: { outDir: "docs" } }' > $VITE_CONFIG
 fi
 
-echo "🎉 Setup complete!"
+# ---- STEP 3: Add Build Script if Missing ----
+if ! grep -q '"build"' "$PACKAGE_FILE"; then
+  echo "🛠️ Adding build script to $PACKAGE_FILE..."
+  npx npm-add-script -k "build" -v "vite build"
+fi
+
+# ---- STEP 4: Build Project ----
+echo "🏗️ Building project with Vite..."
+npm run build || { echo "❌ Build failed."; exit 1; }
+
+# ---- STEP 5: Post-Build Checks ----
+if [ -d "$BUILD_DIR" ]; then
+  echo "✅ Build complete! Output is in ./$BUILD_DIR"
+else
+  echo "❌ Build directory $BUILD_DIR not found. Something went wrong."
+  exit 1
+fi
+
+# ---- STEP 6: GitHub Pages Reminder ----
+echo ""
+echo "🌍 To publish to GitHub Pages:"
+echo "1. Commit and push the /docs folder:"
+echo "   git add ."
+echo "   git commit -m '🚀 Build game'"
+echo "   git push"
+echo ""
+echo "2. Then visit: https://bengothard.github.io/your-game-name/"
+echo ""
+
+echo "🧠 Pro Tip: Rename 'your-game-name' in the URL to match your repo name."
+
+echo "🎉 Setup complete. Time to build something epic!"
