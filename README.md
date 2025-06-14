@@ -1,12 +1,15 @@
 # JS Game Starter
 
-A zero-to-hero template for browser games using Vite and GitHub Pages. Just clone, run one command, and your game is live!
+## 🚀 Setup
+\`\`\`bash
+chmod +x setup.sh
+./setup.sh
+\`\`\`
 
----
+When ready for local development:
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
 
-## 🚀 Quickstart
-
-1. **Clone your new game repo**, then from its root directory run:
-   ```bash
-   chmod +x setup.sh
-   ./setup.sh
+GitHub Pages deployment is automated to \`gh-pages\` branch.
